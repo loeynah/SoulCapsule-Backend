@@ -7,29 +7,16 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
-/**
- * 心情记录实体，对应 mood_record 表
- */
 @Data
-@TableName("mood_record")
-public class MoodRecord {
+@TableName("user")
+public class User {
 
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    private Long userId;
+    private String username;
 
-    private Integer score;
-
-    private String tags;
-
-    private String emotions;
-
-    private String content;
-
-    private String imageUrl;
-
-    private String aiFeedback;
+    private String password;
 
     private LocalDateTime createTime;
 }

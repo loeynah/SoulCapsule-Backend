@@ -4,11 +4,16 @@ server:
 spring:
   application:
     name: soulcapsule-backend
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/soulcapsule_db?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
     username: root
     password: your_password
+    
 
 mybatis-plus:
   configuration:
@@ -19,7 +24,7 @@ mybatis-plus:
       id-type: auto
       table-underline: true
 
-# 智谱 AI 配置
+# AI 配置
 zhipu:
   api:
-    key: "your_api_key"
+    key: "a60965dc75e9400387007026624443e0.VleygqqRZXrmclzd"

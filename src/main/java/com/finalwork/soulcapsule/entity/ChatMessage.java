@@ -8,28 +8,21 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 心情记录实体，对应 mood_record 表
+ * 聊天消息实体，对应 chat_message 表
  */
 @Data
-@TableName("mood_record")
-public class MoodRecord {
+@TableName("chat_message")
+public class ChatMessage {
 
     @TableId(type = IdType.AUTO)
     private Long id;
 
     private Long userId;
 
-    private Integer score;
-
-    private String tags;
-
-    private String emotions;
+    /** 消息角色：user / assistant */
+    private String role;
 
     private String content;
-
-    private String imageUrl;
-
-    private String aiFeedback;
 
     private LocalDateTime createTime;
 }

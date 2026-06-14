@@ -6,10 +6,14 @@ import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.finalwork.soulcapsule.config.ZhipuProperties;
+import com.finalwork.soulcapsule.dto.ChatRequest;
+import com.finalwork.soulcapsule.entity.ChatMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+
+import java.util.List;
 
 @Slf4j
 @Service
@@ -18,6 +22,8 @@ public class ChatService {
 
     private static final String ZHIPU_CHAT_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
     private static final String MODEL = "glm-4-flash";
+    private static final String ROLE_USER = "user";
+    private static final String ROLE_ASSISTANT = "assistant";
 
     private static final String SYSTEM_PROMPT =
             "你叫小旅，是一个温暖、治愈、懂一点心理学的情绪树洞伴侣。你现在正在和一个信任你的大学生聊天。"
@@ -25,11 +31,18 @@ public class ChatService {
                     + "并且回复尽量简短（控制在 50 字以内），多用疑问句引导对方倾诉。";
 
     private final ZhipuProperties zhipuProperties;
+    private final ChatMessageService chatMessageService;
 
     /**
-     * 调用智谱大模型 API，返回 AI 回复文本
+     * 带滑动窗口上下文的聊天：读取历史 → 调用智谱 → 持久化本轮对话
      */
-    public String sendMessage(String userMessage) {
+    public String sendMessage(ChatRequest request) {
+        Long userId = request.getUserId();
+        String userMessage = request.getMessage();
+
+        if (userId == null) {
+            throw new IllegalArgumentException("userId 不能为空");
+        }
         if (!StringUtils.hasText(userMessage)) {
             throw new IllegalArgumentException("消息内容不能为空");
         }
@@ -39,14 +52,17 @@ public class ChatService {
             throw new IllegalStateException("智谱 API Key 未配置，请在 application.yml 中设置 zhipu.api.key");
         }
 
-        return callZhipuApi(apiKey, userMessage);
+        List<ChatMessage> historyMessages = chatMessageService.getRecentContextMessages(userId);
+        String reply = callZhipuApi(apiKey, historyMessages, userMessage.trim());
+
+        chatMessageService.saveMessage(userId, ROLE_USER, userMessage.trim());
+        chatMessageService.saveMessage(userId, ROLE_ASSISTANT, reply);
+
+        return reply;
     }
 
-    /**
-     * 调用智谱 GLM-4-Flash 对话接口
-     */
-    private String callZhipuApi(String apiKey, String userMessage) {
-        JSONObject requestBody = buildRequestBody(userMessage);
+    private String callZhipuApi(String apiKey, List<ChatMessage> historyMessages, String currentUserMessage) {
+        JSONObject requestBody = buildRequestBody(historyMessages, currentUserMessage);
 
         try (HttpResponse response = HttpRequest.post(ZHIPU_CHAT_URL)
                 .header("Authorization", "Bearer " + apiKey)
@@ -70,7 +86,7 @@ public class ChatService {
         }
     }
 
-    private JSONObject buildRequestBody(String userMessage) {
+    private JSONObject buildRequestBody(List<ChatMessage> historyMessages, String currentUserMessage) {
         JSONArray messages = new JSONArray();
 
         JSONObject systemMessage = new JSONObject();
@@ -78,9 +94,16 @@ public class ChatService {
         systemMessage.set("content", SYSTEM_PROMPT);
         messages.add(systemMessage);
 
+        for (ChatMessage history : historyMessages) {
+            JSONObject historyMsg = new JSONObject();
+            historyMsg.set("role", history.getRole());
+            historyMsg.set("content", history.getContent());
+            messages.add(historyMsg);
+        }
+
         JSONObject userMsg = new JSONObject();
-        userMsg.set("role", "user");
-        userMsg.set("content", userMessage);
+        userMsg.set("role", ROLE_USER);
+        userMsg.set("content", currentUserMessage);
         messages.add(userMsg);
 
         JSONObject body = new JSONObject();

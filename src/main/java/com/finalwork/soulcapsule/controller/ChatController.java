@@ -22,7 +22,7 @@ public class ChatController {
      */
     @PostMapping("/send")
     public ApiResult<ChatResponse> send(@RequestBody ChatRequest request) {
-        String reply = chatService.sendMessage(request.getMessage());
+        String reply = chatService.sendMessage(request);
         return ApiResult.success(new ChatResponse(reply));
     }
 }

@@ -14,6 +14,11 @@ public class GlobalExceptionHandler {
         return ApiResult.fail(e.getMessage());
     }
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ApiResult<Void> handleIllegalState(IllegalStateException e) {
+        return ApiResult.fail(e.getMessage());
+    }
+
     @ExceptionHandler(Exception.class)
     public ApiResult<Void> handleException(Exception e) {
         log.error("请求处理异常", e);
